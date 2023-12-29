@@ -598,6 +598,7 @@ class LightningD(TailableProc):
         self.rpcproxy = bitcoindproxy
         self.env['CLN_PLUGIN_LOG'] = "cln_plugin=trace,cln_rpc=trace,cln_grpc=trace,debug"
 
+        self.early_opts = {}
         self.opts = LIGHTNINGD_CONFIG.copy()
         opts = {
             'lightning-dir': lightning_dir,
@@ -633,8 +634,11 @@ class LightningD(TailableProc):
         # Log to stdout so we see it in failure cases, and log file for TailableProc.
         self.opts['log-file'] = ['-', os.path.join(lightning_dir, "log")]
         self.opts['log-prefix'] = self.prefix + ' '
-        # In case you want specific ordering!
-        self.early_opts = ['--developer']
+
+        self.early_opts['--developer'] = None
+
+        # We may need to know the version we are testing.
+        self.version = subprocess.check_output([self.executable, '--version'])
 
     def cleanup(self):
         # To force blackhole to exit, disconnect file must be truncated!
