@@ -944,20 +944,20 @@ static void topo_add_utxos(struct chain_topology *topo, struct block *b)
 {
 	for (size_t i = 0; i < tal_count(b->full_txs); i++) {
 		const struct bitcoin_tx *tx = b->full_txs[i];
-		struct bitcoin_outpoint outpoint;
+		struct bitcoin_outpoint outpoint = { b->txids[i], 0 };
 
-		bitcoin_txid(tx, &outpoint.txid);
-		for (outpoint.n = 0;
-		     outpoint.n < tx->wtx->num_outputs;
-		     outpoint.n++) {
-			if (tx->wtx->outputs[outpoint.n].features
+		for (size_t n = 0; n < tx->wtx->num_outputs; n++) {
+			if (tx->wtx->outputs[n].features
 			    & WALLY_TX_IS_COINBASE)
 				continue;
 
-			const u8 *script = bitcoin_tx_output_get_script(tmpctx, tx, outpoint.n);
-			struct amount_asset amt = bitcoin_tx_output_get_amount(tx, outpoint.n);
+			struct amount_asset amt = bitcoin_tx_output_get_amount(tx, n);
+			if (!amount_asset_is_main(&amt))
+				continue;
 
-			if (amount_asset_is_main(&amt) && is_p2wsh(script, NULL)) {
+			const u8 *script = bitcoin_tx_output_get_script(tmpctx, tx, n);
+			if (is_p2wsh(script, NULL)) {
+				outpoint.n = n;
 				wallet_utxoset_add(topo->ld->wallet, &outpoint,
 						   b->height, i, script,
 						   amount_asset_to_sat(&amt));
