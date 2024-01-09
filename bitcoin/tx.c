@@ -4,6 +4,7 @@
 #include <bitcoin/script.h>
 #include <bitcoin/tx.h>
 #include <ccan/cast/cast.h>
+#include <ccan/crypto/ripemd160/ripemd160.h>
 #include <ccan/str/hex/hex.h>
 #include <ccan/tal/str/str.h>
 #include <common/type_to_string.h>
@@ -322,6 +323,16 @@ const u8 *bitcoin_tx_output_get_script(const tal_t *ctx,
 	output = &tx->wtx->outputs[outnum];
 
 	return cln_wally_tx_output_get_script(ctx, output);
+}
+
+bool bitcoin_tx_output_script_is_p2wsh(const struct bitcoin_tx *tx, int outnum)
+{	const struct wally_tx_output *output;
+	assert(outnum < tx->wtx->num_outputs);
+	output = &tx->wtx->outputs[outnum];
+
+	return output->script_len == BITCOIN_SCRIPTPUBKEY_P2WSH_LEN &&
+	       output->script[0] == OP_0 &&
+	       output->script[1] != OP_PUSHBYTES(sizeof(struct ripemd160));
 }
 
 u8 *bitcoin_tx_output_get_witscript(const tal_t *ctx, const struct bitcoin_tx *tx,
